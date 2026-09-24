@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khu Vườn Tri Thức: Ester & Lipid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .flower-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: float 3s ease-in-out infinite;
+        }
+        .flower-btn:hover {
+            transform: scale(1.1) translateY(-5px);
+            filter: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));
+        }
+        .flower-btn.answered-correctly {
+            color: #22c55e !important; /* Green */
+            animation: none;
+            transform: scale(1.1);
+        }
+        .flower-btn.answered-wrong {
+            color: #ef4444 !important; /* Red */
+            animation: none;
+            opacity: 0.7;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .flower-container {
+            animation-delay: calc(var(--order) * 0.2s);
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="p-6 pb-20">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-12 bg-white/80 p-6 rounded-2xl shadow-sm border border-green-100">
+            <h1 class="text-4xl font-bold text-green-700 mb-2">🌿 Khu Vườn Tri Thức Hóa Học 🌿</h1>
+            <p class="text-gray-600 text-lg">Chủ đề: Ester & Lipid. Hãy nhấp vào từng bông hoa để trả lời câu hỏi và làm khu vườn nở rộ nhé!</p>
+            <div class="mt-4 text-sm font-semibold text-green-600">
+                Tiến độ: <span id="score">0</span> / 8 bông hoa đã nở
+            </div>
+        </header>
+
+        <!-- Khu vườn chứa các bông hoa -->
+        <div id="garden" class="grid grid-cols-2 md:grid-cols-4 gap-8 justify-items-center">
+            <!-- Render bằng JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modal Câu hỏi -->
+    <div id="questionModal" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform scale-95 transition-transform duration-300 overflow-hidden" id="modalContent">
+            <div class="bg-green-500 p-6 text-white flex justify-between items-center">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-seedling"></i> Câu hỏi <span id="qNumber"></span>
+                </h2>
+                <button onclick="closeModal()" class="text-white hover:text-green-200 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 md:p-8">
+                <p id="questionText" class="text-xl text-gray-800 font-medium mb-8 leading-relaxed"></p>
+                <div id="optionsList" class="space-y-4">
+                    <!-- Options render bằng JS -->
+                </div>
+            </div>
+
+            <!-- Khu vực giải thích (ẩn đi lúc đầu) -->
+            <div id="explanationBox" class="hidden p-6 mx-6 mb-6 rounded-xl border-l-4">
+                <div class="flex items-start gap-4">
+                    <div id="resultIcon" class="text-3xl mt-1"></div>
+                    <div>
+                        <h3 id="resultTitle" class="text-lg font-bold mb-1"></h3>
+                        <p id="explanationText" class="text-gray-700 leading-relaxed"></p>
+                        <button onclick="closeModal()" class="mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                            Quay lại khu vườn
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu câu hỏi trích xuất từ SGK Hóa học (Ester - Lipid)
+        const questions = [
+            {
+                id: 1,
+                question: "Khái niệm nào sau đây đúng về chất béo?",
+                options: [
+                    "Chất béo là triester của glycerol với acid béo.",
+                    "Chất béo là ester của alcohol đơn chức với acid béo.",
+                    "Chất béo là hỗn hợp các ester của glycerol.",
+                    "Chất béo là polymer có nhóm chức ester."
+                ],
+                correct: 0,
+                explanation: "Theo định nghĩa SGK: 'Chất béo là triester (ester ba chức) của glycerol với acid béo, gọi chung là triglyceride'."
+            },
+            {
+                id: 2,
+                question: "Công thức chung của ester đơn chức tạo bởi acid carboxylic đơn chức và alcohol đơn chức là gì?",
+                options: [
+                    "R-O-R'",
+                    "R-CO-R'",
+                    "R-CO-O-R'",
+                    "R-O-CO-O-R'"
+                ],
+                correct: 2,
+                explanation: "Ester đơn chức có công thức chung là RCOOR' (hay R-CO-O-R'), trong đó R là gốc hydrocarbon hoặc H, R' là gốc hydrocarbon."
+            },
+            {
+                id: 3,
+                question: "Tên gọi của ester có công thức CH3COOCH2CH3 là gì?",
+                options: [
+                    "Methyl acetate",
+                    "Ethyl acetate",
+                    "Propyl formate",
+                    "Ethyl formate"
+                ],
+                correct: 1,
+                explanation: "Gốc acid là CH3COO- (acetate), gốc alcohol là -CH2CH3 (ethyl). Tên ester = Tên gốc R' + tên gốc acid = Ethyl acetate."
+            },
+            {
+                id: 4,
+                question: "Phản ứng thủy phân ester trong môi trường kiềm (NaOH, KOH) còn được gọi là phản ứng gì?",
+                options: [
+                    "Phản ứng hydrogen hóa",
+                    "Phản ứng ester hóa",
+                    "Phản ứng xà phòng hóa",
+                    "Phản ứng oxi hóa"
+                ],
+                correct: 2,
+                explanation: "SGK ghi rõ: 'Phản ứng thủy phân ester trong môi trường base (thường là phản ứng một chiều) được gọi là phản ứng xà phòng hóa'."
+            },
+            {
+                id: 5,
+                question: "Ở nhiệt độ thường, chất béo chứa nhiều gốc acid béo no (như mỡ lợn, mỡ bò) thường tồn tại ở trạng thái nào?",
+                options: [
+                    "Trạng thái lỏng",
+                    "Trạng thái khí",
+                    "Trạng thái rắn",
+                    "Trạng thái plasma"
+                ],
+                correct: 2,
+                explanation: "Theo tính chất vật lí: 'Khi trong phân tử chất béo chứa nhiều gốc acid béo no thì chất béo thường ở trạng thái rắn như mỡ lợn, mỡ bò...'"
+            },
+            {
+                id: 6,
+                question: "Nguyên nhân gây ra hiện tượng dầu mỡ để lâu ngày bị ôi thiu, có mùi khó chịu là do đâu?",
+                options: [
+                    "Do phản ứng thủy phân chất béo trong không khí.",
+                    "Do phản ứng oxi hóa các gốc acid béo không no bởi oxygen không khí.",
+                    "Do phản ứng cộng hydrogen vào chất béo lỏng.",
+                    "Do vi khuẩn phân hủy glycerol."
+                ],
+                correct: 1,
+                explanation: "Giải thích SGK: 'Khi để lâu trong không khí, các gốc acid béo không no trong chất béo có thể bị oxi hóa chậm bởi oxygen, tạo thành các hợp chất có mùi khó chịu. Đây là nguyên nhân của hiện tượng dầu mỡ bị ôi'."
+            },
+            {
+                id: 7,
+                question: "Lipid là những hợp chất hữu cơ có trong tế bào sống, bao gồm những loại nào?",
+                options: [
+                    "Chỉ gồm chất béo (triglyceride).",
+                    "Chất béo, sáp, steroid, phospholipid...",
+                    "Chất béo, carbohydrate, protein.",
+                    "Chất béo và các acid béo tự do."
+                ],
+                correct: 1,
+                explanation: "Khái niệm Lipid: 'Lipid là các hợp chất hữu cơ có trong tế bào sống... Dựa trên cấu tạo, lipid được phân loại thành: chất béo, sáp, steroid, phospholipid...'."
+            },
+            {
+                id: 8,
+                question: "Phản ứng chuyển hóa chất béo lỏng (dầu thực vật) thành chất béo rắn (bơ thực vật) là phản ứng gì?",
+                options: [
+                    "Phản ứng xà phòng hóa",
+                    "Phản ứng oxi hóa",
+                    "Phản ứng hydrogen hóa",
+                    "Phản ứng trùng hợp"
+                ],
+                correct: 2,
+                explanation: "SGK: 'Chất béo có gốc acid không no có thể phản ứng với hydrogen... tạo thành chất béo chứa gốc acid no (trạng thái rắn). Nhiều loại bơ thực vật được tạo ra bởi quá trình này'."
+            }
+        ];
+
+        let currentQuestionIndex = null;
+        let score = 0;
+        let answeredQuestions = new Set();
+        
+        // Màu sắc của các bông hoa ngẫu nhiên
+        const flowerColors = [
+            'text-pink-500', 'text-purple-500', 'text-yellow-400', 'text-red-500', 
+            'text-blue-400', 'text-orange-500', 'text-fuchsia-500', 'text-rose-400'
+        ];
+
+        function initGarden() {
+            const garden = document.getElementById('garden');
+            garden.innerHTML = '';
+            
+            questions.forEach((q, index) => {
+                const isAnswered = answeredQuestions.has(index);
+                const statusClass = isAnswered ? 'answered-correctly' : '';
+                const colorClass = flowerColors[index % flowerColors.length];
+                
+                const flowerDiv = document.createElement('div');
+                flowerDiv.className = `flower-container flex flex-col items-center justify-center cursor-pointer p-4`;
+                flowerDiv.style.setProperty('--order', index);
+                flowerDiv.onclick = () => openQuestion(index);
+                
+                flowerDiv.innerHTML = `
+                    <div class="flower-btn text-7xl ${statusClass ? statusClass : colorClass} drop-shadow-md" id="flower-${index}">
+                        <i class="fas ${isAnswered ? 'fa-check-circle' : 'fa-fan'}"></i>
+                    </div>
+                    <div class="mt-4 bg-white/60 px-4 py-1 rounded-full text-sm font-bold text-gray-700 shadow-sm border border-white">
+                        Hoa ${index + 1}
+                    </div>
+                `;
+                garden.appendChild(flowerDiv);
+            });
+            document.getElementById('score').innerText = score;
+        }
+
+        function openQuestion(index) {
+            // Nếu đã trả lời đúng rồi thì không mở lại
+            if(answeredQuestions.has(index)) return;
+            
+            currentQuestionIndex = index;
+            const q = questions[index];
+            
+            document.getElementById('qNumber').innerText = index + 1;
+            document.getElementById('questionText').innerText = q.question;
+            
+            const optionsList = document.getElementById('optionsList');
+            optionsList.innerHTML = '';
+            
+            q.options.forEach((opt, optIndex) => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-green-400 hover:bg-green-50 transition-all font-medium text-gray-700 option-btn group`;
+                btn.onclick = () => checkAnswer(optIndex, btn);
+                btn.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center font-bold group-hover:bg-green-500 group-hover:text-white transition-colors">
+                            ${String.fromCharCode(65 + optIndex)}
+                        </span>
+                        <span>${opt}</span>
+                    </div>
+                `;
+                optionsList.appendChild(btn);
+            });
+
+            // Ẩn box giải thích
+            document.getElementById('explanationBox').classList.add('hidden');
+            
+            // Hiển thị modal
+            const modal = document.getElementById('questionModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            // Timeout để hiệu ứng mượt
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function checkAnswer(selectedIndex, clickedBtn) {
+            const q = questions[currentQuestionIndex];
+            const allBtns = document.querySelectorAll('.option-btn');
+            
+            // Disable tất cả nút
+            allBtns.forEach(btn => btn.disabled = true);
+            
+            const explBox = document.getElementById('explanationBox');
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const explText = document.getElementById('explanationText');
+            const flowerBtn = document.getElementById(`flower-${currentQuestionIndex}`);
+
+            explBox.classList.remove('hidden', 'bg-green-50', 'border-green-500', 'bg-red-50', 'border-red-500');
+
+            if (selectedIndex === q.correct) {
+                // Trả lời đúng
+                clickedBtn.classList.add('bg-green-100', 'border-green-500');
+                
+                explBox.classList.add('bg-green-50', 'border-green-500', 'block');
+                resultIcon.innerHTML = '🎉';
+                resultTitle.innerText = 'Chính xác! Bông hoa đã nở rộ!';
+                resultTitle.className = 'text-lg font-bold text-green-700 mb-1';
+                explText.innerText = q.explanation;
+
+                // Cập nhật trạng thái
+                answeredQuestions.add(currentQuestionIndex);
+                score++;
+                
+                // Cập nhật hoa ngoài vườn
+                flowerBtn.className = 'flower-btn text-7xl answered-correctly drop-shadow-md';
+                flowerBtn.innerHTML = '<i class="fas fa-check-circle"></i>';
+                
+            } else {
+                // Trả lời sai
+                clickedBtn.classList.add('bg-red-100', 'border-red-500');
+                allBtns[q.correct].classList.add('bg-green-100', 'border-green-500'); // Hiển thị đáp án đúng
+
+                explBox.classList.add('bg-red-50', 'border-red-500', 'block');
+                resultIcon.innerHTML = '💡';
+                resultTitle.innerText = 'Rất tiếc, câu trả lời chưa đúng!';
+                resultTitle.className = 'text-lg font-bold text-red-700 mb-1';
+                explText.innerHTML = `<strong>Đáp án đúng là: ${String.fromCharCode(65 + q.correct)}</strong><br><br><em>Trích dẫn kiến thức:</em> ${q.explanation}`;
+                
+                flowerBtn.classList.add('answered-wrong');
+            }
+            
+            document.getElementById('score').innerText = score;
+            
+            // Tự động cuộn xuống phần giải thích
+            explBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('questionModal');
+            const content = document.getElementById('modalContent');
+            
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Khởi tạo khu vườn khi trang load
+        window.onload = initGarden;
+    </script>
+</body>
+</html>
